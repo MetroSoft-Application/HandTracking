@@ -60,7 +60,7 @@ function onResults(results)
         for (let i = 0; i < results.multiHandLandmarks.length; i++)
         {
             const landmarks = results.multiHandLandmarks[i];
-            const handedness = results.multiHandedness[i].label;
+            const handedness = results.multiHandedness[i].label === "Right" ? "Left" : "Right";
 
             if (handedness === "Right" && (selectedHand === 'right' || selectedHand === 'both'))
             {
