@@ -1,8 +1,17 @@
-const videoElement = document.querySelector("video");
-const canvasElement = document.querySelector("canvas");
-const canvasCtx = canvasElement.getContext("2d");
-const rightHandCoordinatesDiv = document.getElementById("rightHandCoordinates");
-const leftHandCoordinatesDiv = document.getElementById("leftHandCoordinates");
+let videoElement = document.querySelector("video");
+let canvasElement = document.querySelector("canvas");
+let canvasCtx = canvasElement.getContext("2d");
+let rightHandCoordinatesDiv = document.getElementById("rightHandCoordinates");
+let leftHandCoordinatesDiv = document.getElementById("leftHandCoordinates");
+let isCameraStarted = false;
+let hands = new Hands({
+    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
+});
+let rightHandLandmarks = [];
+let leftHandLandmarks = [];
+let controls = document.getElementById("controls");
+let resizeHandle = document.getElementById("resize-handle");
+let isResizing = false;
 
 const jointNames = [
     "0:手首", "1:親指の付け根", "2:親指の第1関節", "3:親指の第2関節", "4:親指の先端",
@@ -11,10 +20,6 @@ const jointNames = [
     "13:薬指の付け根", "14:薬指の第1関節", "15:薬指の第2関節", "16:薬指の先端",
     "17:小指の付け根", "18:小指の第1関節", "19:小指の第2関節", "20:小指の先端"
 ];
-
-const hands = new Hands({
-    locateFile: (file) => `https://cdn.jsdelivr.net/npm/@mediapipe/hands/${file}`,
-});
 
 hands.setOptions({
     maxNumHands: 2,
@@ -25,14 +30,12 @@ hands.setOptions({
 
 hands.onResults(onResults);
 
-let rightHandLandmarks = [];
-let leftHandLandmarks = [];
-
 async function startCamera()
 {
     try
     {
-        const stream = await navigator.mediaDevices.getUserMedia({ video: true });
+        // 新しいストリームを取得
+        stream = await navigator.mediaDevices.getUserMedia({ video: true });
         videoElement.srcObject = stream;
         videoElement.onloadedmetadata = () =>
         {
@@ -91,6 +94,11 @@ function onResults(results)
 
 async function processFrame()
 {
+    if (!isCameraStarted)
+    {
+        return;
+    }
+
     await hands.send({ image: videoElement });
     requestAnimationFrame(processFrame);
 }
@@ -114,18 +122,29 @@ setInterval(() =>
     leftHandCoordinatesDiv.innerHTML = leftHandHTML || "左手が検出されていません";
 }, 500);
 
-let selectedHand = 'both';
 
+// ボタン押下でカメラ開始と表示
 document.getElementById('applyButton').addEventListener('click', () =>
 {
     selectedHand = document.getElementById('handSelection').value;
+    if (isCameraStarted)
+    {
+        stopCamera();
+    } else
+    {
+        startCamera();
+    }
+    isCameraStarted = !isCameraStarted;
 });
 
-startCamera();
-
-const controls = document.getElementById("controls");
-const resizeHandle = document.getElementById("resize-handle");
-let isResizing = false;
+function stopCamera()
+{
+    // カメラを停止
+    const stream = videoElement.srcObject;
+    const tracks = stream.getTracks();
+    tracks.forEach(track => track.stop());
+    videoElement.srcObject = null;
+}
 
 resizeHandle.addEventListener("mousedown", (e) =>
 {
